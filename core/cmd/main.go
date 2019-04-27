@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"flag"
 	"fmt"
+	"github.com/vkcom/kittenhouse/core/authorizer"
 	"log"
 	"net/http"
 	_ "net/http/pprof" // this is effectively a main package
@@ -54,6 +55,8 @@ var (
 		maxSendSize       int64
 		maxFileSize       int64
 		rotateIntervalSec int64
+
+		authCfg string
 	}
 
 	logFd *os.File
@@ -102,6 +105,9 @@ func init() {
 	flag.Int64Var(&argv.maxFileSize, `max-file-size`, 50<<20, `max file size in bytes`)
 	flag.Int64Var(&argv.rotateIntervalSec, `rotate-interval-sec`, 1800, `how often to rotate files`)
 	flag.BoolVar(&argv.markAsDone, `mark-as-done`, false, `rename files to *.done instead of deleting them upon successful delivery`)
+
+	// auth options
+	flag.StringVar(&argv.authCfg, `auth-cfg`, ``, `path to auth config`)
 
 	flag.Parse()
 }

@@ -6,6 +6,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"github.com/vkcom/kittenhouse/core/authorizer"
 	"io"
 	"log"
 	"net"
@@ -278,6 +279,7 @@ func handlePOST(ctx *fasthttp.RequestCtx) {
 //      []byte     Response contents
 
 var bytesKitten = []byte("KITTEN")
+var bytesAuthToken = []byte("X-Auth-Token")
 
 func debugLogPrintf(msg string, args ...interface{}) {
 	if !debug {
@@ -417,8 +419,31 @@ func handleKitten(ctx *fasthttp.RequestCtx) {
 	ctx.Hijack(handleKittenStream)
 }
 
+func handleAuthError(ctx *fasthttp.RequestCtx, err error) {
+	ctx.SetStatusCode(401)
+	ctx.WriteString(fmt.Sprintf("Authorization error: %s", err.Error()))
+}
+
+func handleAuth(ctx *fasthttp.RequestCtx) error {
+	authHeader := ctx.Request.Header.Peek("X-Auth-Token")
+	if len(authHeader) == 0 {
+		return fmt.Errorf("no auth header provided")
+	}
+	if len(authHeader) > 0 {
+		valid := authorizer.Validate(string(authHeader))
+		if !valid {
+			return fmt.Errorf("authorization error: auth token is not valid")
+		}
+	}
+	return nil
+}
+
 func requestHandler(ctx *fasthttp.RequestCtx) {
 	if bytes.Equal(ctx.Method(), bytesKitten) {
+		if err := handleAuth(ctx); err != nil {
+			handleAuthError(ctx, err)
+			return
+		}
 		handleKitten(ctx)
 		return
 	}
